@@ -7,6 +7,9 @@ const IndicatorsPositions = {
 
 const B3apiBaseUrl = 'https://sistemaswebb3-balcao.b3.com.br'
 const BrapiBaseUrl = 'https://brapi.dev/api/v2'
+const BrapiBaseV1Url = 'https://brapi.dev/api'
+
+var MyAssets = {}
 
 function getCDI(input) {
 
@@ -162,19 +165,120 @@ function parseAssets(Data){
 
 function getAssets(input){
 
-  let FisData = SpreadsheetApp.getActive().getRange("Investments!T3:T").getValues()
+  let FisData = SpreadsheetApp.getActive().getRange("Investments!X3:X").getValues()
   let Fis = parseAssets(FisData)
-  let StocksData = SpreadsheetApp.getActive().getRange("Investments!N3:N").getValues()
+
+  let J = 3
+
+  for (let I = 0; I < Fis.length; I++) {
+
+    MyAssets[Fis[I]] = {}
+    MyAssets[Fis[I]]['Line'] = J
+    MyAssets[Fis[I]]['Value'] = 26
+    MyAssets[Fis[I]]['Earnings'] = 28
+
+    J = J + 1
+
+  }
+
+  let StocksData = SpreadsheetApp.getActive().getRange("Investments!O3:O").getValues()
   let Stocks = parseAssets(StocksData)
+
+  J = 3
+
+  for (let I = 0; I < Stocks.length; I++) {
+
+    MyAssets[Stocks[I]] = {}
+    MyAssets[Stocks[I]]['Line'] = J
+    MyAssets[Stocks[I]]['Value'] = 17
+    MyAssets[Stocks[I]]['Earnings'] = 19
+
+    J = J + 1
+
+  }
+
   let Assets = Fis.concat(Stocks)
   return Assets
+
+}
+
+function getAssetsString(Assets){
+
+  let AssetsString = ''
+
+  for (let I = 0; I < Assets.length; I++) {
+
+    if(AssetsString != ''){
+
+      AssetsString = AssetsString + '%2C'
+
+    }
+
+    AssetsString = AssetsString + Assets[I]
+
+  }
+
+  return AssetsString
 
 }
 
 function getAssetsInfo(input){
   
   let Assets = getAssets()
-  
-  //https://brapi.dev/api/quote/IVVB11%2CHGLG11?range=1d&interval=1d&fundamental=false&dividends=true
+  let AssetsString = getAssetsString(Assets)
+  let Url = BrapiBaseV1Url + '/quote/'+ AssetsString +'?range=1d&interval=1d&fundamental=false&dividends=true'
+  let AssetDetails = {}
+  let AssetResult = {}
+  let Response = UrlFetchApp.fetch(Url)
+  let Sheet = SpreadsheetApp.getActive().getSheetByName("Investments")
+
+  if(Response.getResponseCode() == 200 && Response.getContentText() != ''){
+
+    let Data = JSON.parse(Response.getContentText())
+
+    if(typeof Data['results'] !== 'undefined'){
+
+      Data = Data['results']
+
+      for (let I = 0; I < Data.length; I++) {
+
+        AssetDetails = MyAssets[Data[I]['symbol']]
+
+        if(Data[I]['regularMarketPrice']!== 'undefined'){
+
+          AssetResult['Value'] = Data[I]['regularMarketPrice']
+
+        } else {
+
+          AssetResult['Value'] = 0
+
+        }
+
+        if(Data[I]['dividendsData'] !== 'undefined'){
+
+          AssetResult['Earnings'] = 0
+
+          /*if(Data[I]['dividendsData']['cashDividends'] !== null){
+
+            Logger.log(Data[I]['dividendsData']['cashDividends'])
+
+            AssetResult['Earnings'] = Data[I]['dividendsData']['cashDividends'][0]['rate']
+
+          } else {
+
+            AssetResult['Earnings'] = 0
+
+          }*/
+
+        }
+          
+        Sheet.getRange(AssetDetails['Line'], AssetDetails['Value']).setValue(AssetResult['Value'])
+        Sheet.getRange(AssetDetails['Line'], AssetDetails['Earnings']).setValue(AssetResult['Earnings'])
+
+      }
+
+    }
+
+  }
 
 }
