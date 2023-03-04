@@ -282,3 +282,15 @@ function getAssetsInfo(input){
   }
 
 }
+
+function updateFinancialDevelopment(input){
+
+  let Sheet = SpreadsheetApp.getActive().getSheetByName("Development")
+  let NetWorth = SpreadsheetApp.getActive().getRange("Retirement!A11").getValue()
+
+  Sheet.insertRowBefore(1)
+
+  Sheet.getRange(1, 1).setValue(new Date())
+  Sheet.getRange(1, 2).setValue(NetWorth)
+
+}
