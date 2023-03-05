@@ -165,7 +165,7 @@ function parseAssets(Data){
 
 function getAssets(input){
 
-  let FisData = SpreadsheetApp.getActive().getRange("Investments!X3:X").getValues()
+  let FisData = SpreadsheetApp.getActive().getRange("Investments!Y3:Y").getValues()
   let Fis = parseAssets(FisData)
 
   let J = 3
@@ -174,8 +174,8 @@ function getAssets(input){
 
     MyAssets[Fis[I]] = {}
     MyAssets[Fis[I]]['Line'] = J
-    MyAssets[Fis[I]]['Value'] = 26
-    MyAssets[Fis[I]]['Earnings'] = 28
+    MyAssets[Fis[I]]['Value'] = 27
+    MyAssets[Fis[I]]['Earnings'] = 29
 
     J = J + 1
 
@@ -244,31 +244,23 @@ function getAssetsInfo(input){
 
         AssetDetails = MyAssets[Data[I]['symbol']]
 
+        AssetResult['Value'] = 0
+
         if(Data[I]['regularMarketPrice']!== 'undefined'){
 
           AssetResult['Value'] = Data[I]['regularMarketPrice']
 
-        } else {
-
-          AssetResult['Value'] = 0
-
         }
 
-        if(Data[I]['dividendsData'] !== 'undefined'){
+        AssetResult['Earnings'] = 0
 
-          AssetResult['Earnings'] = 0
+        if(Data[I]['dividendsData'] !== 'undefined' && Object.keys(Data[I]['dividendsData']).length > 0 ){
 
-          /*if(Data[I]['dividendsData']['cashDividends'] !== null){
-
-            Logger.log(Data[I]['dividendsData']['cashDividends'])
+          if(Data[I]['dividendsData']['cashDividends'] !== 'undefined' && Data[I]['dividendsData']['cashDividends'].length > 0){
 
             AssetResult['Earnings'] = Data[I]['dividendsData']['cashDividends'][0]['rate']
 
-          } else {
-
-            AssetResult['Earnings'] = 0
-
-          }*/
+          }
 
         }
           
