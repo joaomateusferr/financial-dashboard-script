@@ -2,7 +2,9 @@ const IndicatorsPositions = {
   "Dolar-Real" : {"Row" : 3, "RateCol" : 2, "DataCol" : 3, "UpdateCol" : 4},
   "SLIC" : {"Row" : 4, "RateCol" : 2, "DataCol" : 3, "UpdateCol" : 4},
   "CDI" :  {"Row" : 5, "RateCol" : 2, "DataCol" : 3, "UpdateCol" : 4},
-  "Inflation" :  {"Row" : 6, "RateCol" : 2, "DataCol" : 3, "UpdateCol" : 4} 
+  "Inflation" :  {"Row" : 6, "RateCol" : 2, "DataCol" : 3, "UpdateCol" : 4},
+  "Bitcoin-Dollars" :  {"Row" : 7, "RateCol" : 2, "DataCol" : 3, "UpdateCol" : 4},
+  "MayerMultiple" :  {"Row" : 8, "RateCol" : 2, "DataCol" : 3, "UpdateCol" : 4} 
 }
 
 const B3apiBaseUrl = 'https://sistemaswebb3-balcao.b3.com.br'
@@ -135,6 +137,69 @@ function getDolarRealRate(input) {
   Sheet.getRange(IndicatorsPositions["Dolar-Real"]["Row"], IndicatorsPositions["Dolar-Real"]["RateCol"]).setValue(0)
   Sheet.getRange(IndicatorsPositions["Dolar-Real"]["Row"], IndicatorsPositions["Dolar-Real"]["DataCol"]).setValue(new Date())
   Sheet.getRange(IndicatorsPositions["Dolar-Real"]["Row"], IndicatorsPositions["Dolar-Real"]["UpdateCol"]).setValue(new Date())
+
+}
+
+function calculateMayerMultiple(Data) {
+
+  let Sum = 0
+
+  for (let I = 0; I < Data.length; I++) {
+    Sum = Sum + Data[I]['price']
+  }
+
+  return Data[199]['price']/(Sum/200) //current value divided by the average of the last 200 days
+  
+}
+
+function getMayerMultipleColor(MayerMultiple) {
+
+  if(MayerMultiple < 1){
+    return 'green'
+  } if(MayerMultiple < 2.4){
+    return 'yellow'
+  } else {
+    return 'red'
+  }
+  
+}
+
+function getMayerMultiple(input) {
+  
+  let Url = 'https://firebasestorage.googleapis.com/v0/b/buy-bitcoin-worldwide.appspot.com/o/prices%2Fhistoric%2Fbtc%2Fusd.json?alt=media'
+  let Response = UrlFetchApp.fetch(Url)
+  let Sheet = SpreadsheetApp.getActive().getSheetByName("Investments")
+
+  if(Response.getResponseCode() == 200 && Response.getContentText() != ""){
+
+    let Data = JSON.parse(Response.getContentText())
+
+    if(Data.length > 0 && typeof Data[0]['date'] !== 'undefined' && typeof Data[0]['price'] !== 'undefined'){
+
+      Data = Data.slice(-200)
+      let UpdatedAt = new Date(Data[199]['date']).toLocaleDateString('pt-BR')
+      let MayerMultiple = calculateMayerMultiple(Data)
+      let MayerMultipleColor = getMayerMultipleColor(MayerMultiple)
+
+      if(typeof MayerMultiple !== 'undefined' && typeof UpdatedAt !== 'undefined'){
+        Sheet.getRange(IndicatorsPositions["MayerMultiple"]["Row"], IndicatorsPositions["MayerMultiple"]["RateCol"]).setValue(MayerMultiple)
+        Sheet.getRange(IndicatorsPositions["MayerMultiple"]["Row"], IndicatorsPositions["MayerMultiple"]["RateCol"]).setBackground(MayerMultipleColor)
+        Sheet.getRange(IndicatorsPositions["MayerMultiple"]["Row"], IndicatorsPositions["MayerMultiple"]["DataCol"]).setValue(UpdatedAt)
+        Sheet.getRange(IndicatorsPositions["MayerMultiple"]["Row"], IndicatorsPositions["MayerMultiple"]["UpdateCol"]).setValue(new Date())
+
+        Sheet.getRange(IndicatorsPositions["Bitcoin-Dollars"]["Row"], IndicatorsPositions["MayerMultiple"]["RateCol"]).setValue(Data[199]['price'])
+        Sheet.getRange(IndicatorsPositions["Bitcoin-Dollars"]["Row"], IndicatorsPositions["MayerMultiple"]["DataCol"]).setValue(UpdatedAt)
+        Sheet.getRange(IndicatorsPositions["Bitcoin-Dollars"]["Row"], IndicatorsPositions["MayerMultiple"]["UpdateCol"]).setValue(new Date())
+        return
+      }
+
+    }
+
+  }
+
+  Sheet.getRange(IndicatorsPositions["MayerMultiple"]["Row"], IndicatorsPositions["MayerMultiple"]["RateCol"]).setValue(0)
+  Sheet.getRange(IndicatorsPositions["MayerMultiple"]["Row"], IndicatorsPositions["MayerMultiple"]["DataCol"]).setValue(new Date())
+  Sheet.getRange(IndicatorsPositions["MayerMultiple"]["Row"], IndicatorsPositions["MayerMultiple"]["UpdateCol"]).setValue(new Date())
 
 }
 
@@ -286,3 +351,4 @@ function updateFinancialDevelopment(input){
   Sheet.getRange(1, 2).setValue(NetWorth)
 
 }
+
