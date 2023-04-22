@@ -208,6 +208,7 @@ function updateIndicators(input) {
   getSLIC()
   getCDI()
   getInflation()
+  getMayerMultiple()
 }
 
 function parseAssets(Data){
@@ -351,4 +352,3 @@ function updateFinancialDevelopment(input){
   Sheet.getRange(1, 2).setValue(NetWorth)
 
 }
-
