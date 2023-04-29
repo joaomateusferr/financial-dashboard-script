@@ -3,13 +3,14 @@ const IndicatorsPositions = {
   "SLIC" : {"Row" : 4, "RateCol" : 2, "DataCol" : 3, "UpdateCol" : 4},
   "CDI" :  {"Row" : 5, "RateCol" : 2, "DataCol" : 3, "UpdateCol" : 4},
   "Inflation" :  {"Row" : 6, "RateCol" : 2, "DataCol" : 3, "UpdateCol" : 4},
-  "Bitcoin-Dollars" :  {"Row" : 7, "RateCol" : 2, "DataCol" : 3, "UpdateCol" : 4},
+  "Bitcoin-Dollar" :  {"Row" : 7, "RateCol" : 2, "DataCol" : 3, "UpdateCol" : 4},
   "MayerMultiple" :  {"Row" : 8, "RateCol" : 2, "DataCol" : 3, "UpdateCol" : 4} 
 }
 
 const B3apiBaseUrl = 'https://sistemaswebb3-balcao.b3.com.br'
 const BrapiBaseUrl = 'https://brapi.dev/api/v2'
 const BrapiBaseV1Url = 'https://brapi.dev/api'
+const YahooFinanceBaseUrl = 'https://query1.finance.yahoo.com/v7/finance'
 
 var MyAssets = {}
 
@@ -187,9 +188,9 @@ function getMayerMultiple(input) {
         Sheet.getRange(IndicatorsPositions["MayerMultiple"]["Row"], IndicatorsPositions["MayerMultiple"]["DataCol"]).setValue(UpdatedAt)
         Sheet.getRange(IndicatorsPositions["MayerMultiple"]["Row"], IndicatorsPositions["MayerMultiple"]["UpdateCol"]).setValue(new Date())
 
-        Sheet.getRange(IndicatorsPositions["Bitcoin-Dollars"]["Row"], IndicatorsPositions["MayerMultiple"]["RateCol"]).setValue(Data[199]['price'])
-        Sheet.getRange(IndicatorsPositions["Bitcoin-Dollars"]["Row"], IndicatorsPositions["MayerMultiple"]["DataCol"]).setValue(UpdatedAt)
-        Sheet.getRange(IndicatorsPositions["Bitcoin-Dollars"]["Row"], IndicatorsPositions["MayerMultiple"]["UpdateCol"]).setValue(new Date())
+        Sheet.getRange(IndicatorsPositions["Bitcoin-Dollar"]["Row"], IndicatorsPositions["MayerMultiple"]["RateCol"]).setValue(Data[199]['price'])
+        Sheet.getRange(IndicatorsPositions["Bitcoin-Dollar"]["Row"], IndicatorsPositions["MayerMultiple"]["DataCol"]).setValue(UpdatedAt)
+        Sheet.getRange(IndicatorsPositions["Bitcoin-Dollar"]["Row"], IndicatorsPositions["MayerMultiple"]["UpdateCol"]).setValue(new Date())
         return
       }
 
@@ -339,6 +340,83 @@ function getAssetsInfo(input){
 
   }
 
+}
+
+function getAmericanAssets(input){
+
+  let StocksData = SpreadsheetApp.getActive().getRange("Investments!AN3:AN").getValues()
+  let AmericanStocks = parseAssets(StocksData)
+
+  J = 3
+
+  for (let I = 0; I < AmericanStocks.length; I++) {
+
+    MyAssets[AmericanStocks[I]] = {}
+    MyAssets[AmericanStocks[I]]['Line'] = J
+    MyAssets[AmericanStocks[I]]['Value'] = 42
+    MyAssets[AmericanStocks[I]]['Earnings'] = 44
+
+    J = J + 1
+
+  }
+
+  return AmericanStocks
+
+}
+
+function getAmericanAssetsInfo(input){
+
+  let AmericanAssets = getAmericanAssets()
+  let AmericanAssetsString = getAssetsString(AmericanAssets)
+  let Url = YahooFinanceBaseUrl + '/quote?symbols='+ AmericanAssetsString
+  let AssetDetails = {}
+  let AssetResult = {}
+  let Response = UrlFetchApp.fetch(Url)
+  let Sheet = SpreadsheetApp.getActive().getSheetByName("Investments")
+
+  if(Response.getResponseCode() == 200 && Response.getContentText() != ''){
+    
+    let Data = JSON.parse(Response.getContentText())
+
+    if(typeof Data['quoteResponse'] !== 'undefined'){
+
+      Data = Data['quoteResponse']
+
+      if(typeof Data['result'] !== 'undefined'){
+
+        Data = Data['result']
+
+        for (let I = 0; I < Data.length; I++) {
+
+          AssetDetails = MyAssets[Data[I]['symbol']]
+
+          AssetResult['Value'] = 0
+
+          if(Data[I]['regularMarketPrice']!== 'undefined'){
+
+            AssetResult['Value'] = Data[I]['regularMarketPrice']
+
+          }
+
+          AssetResult['Earnings'] = 0
+
+          if(Data[I]['trailingAnnualDividendRate'] !== 'undefined'){
+
+            AssetResult['Earnings'] = Data[I]['trailingAnnualDividendRate']
+
+          }
+            
+          Sheet.getRange(AssetDetails['Line'], AssetDetails['Value']).setValue(AssetResult['Value'])
+          Sheet.getRange(AssetDetails['Line'], AssetDetails['Earnings']).setValue(AssetResult['Earnings'])
+
+        }
+        
+      }
+
+    }
+
+  }
+  
 }
 
 function updateFinancialDevelopment(input){
