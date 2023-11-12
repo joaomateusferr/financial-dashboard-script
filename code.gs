@@ -7,6 +7,11 @@ const IndicatorsPositions = {
   "MayerMultiple" :  {"Row" : 8, "RateCol" : 2, "DataCol" : 3, "UpdateCol" : 4} 
 }
 
+const DividendRanges = {
+  "BR" : {"Date": "Dividends(R$)!A3:A", "Tickers" : "Dividends(R$)!B3:B", "Dividends" : "Dividends(R$)!D3:D"},
+  "US" : {"Date": "Dividends($)!A3:A","Tickers" : "Dividends($)!B3:B", "Dividends" : "Dividends($)!F3:F"},
+}
+
 const B3apiBaseUrl = 'https://sistemaswebb3-balcao.b3.com.br'
 const BrapiBaseUrl = 'https://brapi.dev/api/v2'
 const BrapiBaseV1Url = 'https://brapi.dev/api'
@@ -212,214 +217,20 @@ function updateIndicators(input) {
   getMayerMultiple()
 }
 
-function parseAssets(Data){
+function reloadFormula(Sheet, Row, Col) {
 
-  let Assets = []
-
-  for (let I = 0; I < Data.length; I++) {
-
-    if(Data[I][0] == ''){
-      break
-    }
-
-    Assets.push(Data[I][0]);
-
-  }
-
-  return Assets
+  let CellarRange = Sheet.getRange(Row, Col);
+  let Formulas = CellarRange.getFormulas();
+  CellarRange.clearContent();
+  CellarRange.setFormulas(Formulas);
 
 }
 
-function getAssets(input){
-
-  let FisData = SpreadsheetApp.getActive().getRange("Investments!Y3:Y").getValues()
-  let Fis = parseAssets(FisData)
-
-  let J = 3
-
-  for (let I = 0; I < Fis.length; I++) {
-
-    MyAssets[Fis[I]] = {}
-    MyAssets[Fis[I]]['Line'] = J
-    MyAssets[Fis[I]]['Value'] = 27
-    MyAssets[Fis[I]]['Earnings'] = 29
-
-    J = J + 1
-
-  }
-
-  let StocksData = SpreadsheetApp.getActive().getRange("Investments!O3:O").getValues()
-  let Stocks = parseAssets(StocksData)
-
-  J = 3
-
-  for (let I = 0; I < Stocks.length; I++) {
-
-    MyAssets[Stocks[I]] = {}
-    MyAssets[Stocks[I]]['Line'] = J
-    MyAssets[Stocks[I]]['Value'] = 17
-    MyAssets[Stocks[I]]['Earnings'] = 19
-
-    J = J + 1
-
-  }
-
-  let Assets = Fis.concat(Stocks)
-  return Assets
-
-}
-
-function getAssetsString(Assets){
-
-  let AssetsString = ''
-
-  for (let I = 0; I < Assets.length; I++) {
-
-    if(AssetsString != ''){
-
-      AssetsString = AssetsString + '%2C'
-
-    }
-
-    AssetsString = AssetsString + Assets[I]
-
-  }
-
-  return AssetsString
-
-}
-
-function getAssetsInfo(input){
-  
-  let Assets = getAssets()
-  let AssetsString = getAssetsString(Assets)
-  let Url = BrapiBaseV1Url + '/quote/'+ AssetsString +'?range=1d&interval=1d&fundamental=false&dividends=true'
-  let AssetDetails = {}
-  let AssetResult = {}
-  let Response = UrlFetchApp.fetch(Url)
-  let Sheet = SpreadsheetApp.getActive().getSheetByName("Investments")
-
-  if(Response.getResponseCode() == 200 && Response.getContentText() != ''){
-
-    let Data = JSON.parse(Response.getContentText())
-
-    if(typeof Data['results'] !== 'undefined'){
-
-      Data = Data['results']
-
-      for (let I = 0; I < Data.length; I++) {
-
-        AssetDetails = MyAssets[Data[I]['symbol']]
-
-        AssetResult['Value'] = 0
-
-        if(Data[I]['regularMarketPrice']!== 'undefined'){
-
-          AssetResult['Value'] = Data[I]['regularMarketPrice']
-
-        }
-
-        AssetResult['Earnings'] = 0
-
-        if(Data[I]['dividendsData'] !== 'undefined' && Object.keys(Data[I]['dividendsData']).length > 0 ){
-
-          if(Data[I]['dividendsData']['cashDividends'] !== 'undefined' && Data[I]['dividendsData']['cashDividends'].length > 0){
-
-            AssetResult['Earnings'] = Data[I]['dividendsData']['cashDividends'][0]['rate']
-
-          }
-
-        }
-          
-        Sheet.getRange(AssetDetails['Line'], AssetDetails['Value']).setValue(AssetResult['Value'])
-        Sheet.getRange(AssetDetails['Line'], AssetDetails['Earnings']).setValue(AssetResult['Earnings'])
-
-      }
-
-    }
-
-  }
-
-}
-
-function getAmericanAssets(input){
-
-  let StocksData = SpreadsheetApp.getActive().getRange("Investments!AN3:AN").getValues()
-  let AmericanStocks = parseAssets(StocksData)
-
-  J = 3
-
-  for (let I = 0; I < AmericanStocks.length; I++) {
-
-    MyAssets[AmericanStocks[I]] = {}
-    MyAssets[AmericanStocks[I]]['Line'] = J
-    MyAssets[AmericanStocks[I]]['Value'] = 42
-    MyAssets[AmericanStocks[I]]['Earnings'] = 44
-
-    J = J + 1
-
-  }
-
-  return AmericanStocks
-
-}
-
-function getAmericanAssetsInfo(input){
-
-  let AmericanAssets = getAmericanAssets()
-  let AmericanAssetsString = getAssetsString(AmericanAssets)
-  let Url = YahooFinanceBaseUrl + '/quote?symbols='+ AmericanAssetsString
-  let AssetDetails = {}
-  let AssetResult = {}
-  let Response = UrlFetchApp.fetch(Url)
-  let Sheet = SpreadsheetApp.getActive().getSheetByName("Investments")
-
-  if(Response.getResponseCode() == 200 && Response.getContentText() != ''){
-    
-    let Data = JSON.parse(Response.getContentText())
-
-    if(typeof Data['quoteResponse'] !== 'undefined'){
-
-      Data = Data['quoteResponse']
-
-      if(typeof Data['result'] !== 'undefined'){
-
-        Data = Data['result']
-
-        for (let I = 0; I < Data.length; I++) {
-
-          AssetDetails = MyAssets[Data[I]['symbol']]
-
-          AssetResult['Value'] = 0
-
-          if(Data[I]['regularMarketPrice']!== 'undefined'){
-
-            AssetResult['Value'] = Data[I]['regularMarketPrice']
-
-          }
-
-          AssetResult['Earnings'] = 0
-
-          if(Data[I]['trailingAnnualDividendRate'] !== 'undefined'){
-
-            AssetResult['Earnings'] = Data[I]['trailingAnnualDividendRate']
-
-          }
-            
-          Sheet.getRange(AssetDetails['Line'], AssetDetails['Value']).setValue(AssetResult['Value'])
-          Sheet.getRange(AssetDetails['Line'], AssetDetails['Earnings']).setValue(AssetResult['Earnings'])
-
-        }
-        
-      }
-
-    }
-
-  }
-  
-}
 
 function updateFinancialDevelopment(input){
+
+  updateIndicators()
+  SpreadsheetApp.flush();
 
   let Sheet = SpreadsheetApp.getActive().getSheetByName("Development")
   let NetWorth = SpreadsheetApp.getActive().getRange("Retirement!A11").getValue()
@@ -428,5 +239,79 @@ function updateFinancialDevelopment(input){
 
   Sheet.getRange(1, 1).setValue(new Date())
   Sheet.getRange(1, 2).setValue(NetWorth)
+
+}
+
+function parseColumns(Data){
+
+  let Result = []
+
+  for (let I = 0; I < Data.length; I++) {
+
+    if(Data[I][0] == ''){
+      break
+    }
+
+    Result.push(Data[I][0]);
+
+  }
+
+  return Result
+
+}
+
+function addDividendsByTicker(Ticker, Country){
+
+  let TickersData = SpreadsheetApp.getActive().getRange(DividendRanges[Country]["Tickers"]).getValues();
+  let Tickers = parseColumns(TickersData);
+
+  let DividendsData = SpreadsheetApp.getActive().getRange(DividendRanges[Country]["Dividends"]).getValues();
+  let Dividends = parseColumns(DividendsData);
+
+  let Sum = 0;
+
+  for (let I = 0; I < Tickers.length; I++) {
+
+    if(Tickers[I] != Ticker){
+      continue;
+    }
+
+    Sum = Sum + Dividends[I];
+
+  }
+
+  return Sum;
+
+}
+
+function addDividendsByMonth(LineDate, Country){
+
+  let CurrentDate = new Date(LineDate);
+
+  let DatesData = SpreadsheetApp.getActive().getRange(DividendRanges[Country]["Date"]).getValues();
+  let Dates = parseColumns(DatesData);
+
+  let DividendsData = SpreadsheetApp.getActive().getRange(DividendRanges[Country]["Dividends"]).getValues();
+  let Dividends = parseColumns(DividendsData);
+
+  let Sum = 0;
+
+  for (let I = 0; I < Dates.length; I++) {
+
+    DividendDate = new Date(Dates[I])
+
+    if(DividendDate.getFullYear() != CurrentDate.getFullYear()){
+      continue;
+    }
+
+    if(DividendDate.getMonth() != CurrentDate.getMonth()){
+      continue;
+    }
+
+    Sum = Sum + Dividends[I];
+
+  }
+
+  return Sum;
 
 }
