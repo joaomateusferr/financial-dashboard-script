@@ -1,6 +1,5 @@
 const IndicatorsPositions = {
   "CDI" :  {"Row" : 5, "RateCol" : 2, "DataCol" : 3, "UpdateCol" : 4},
-  "Bitcoin-Dollar" :  {"Row" : 7, "RateCol" : 2, "DataCol" : 3, "UpdateCol" : 4},
   "MayerMultiple" :  {"Row" : 8, "RateCol" : 2, "DataCol" : 3, "UpdateCol" : 4} 
 }
 
@@ -113,11 +112,14 @@ function updateIndicators(input) {
     IPCA
     =CONCATENATE(REGEXEXTRACT(INDEX(IMPORTHTML("https://www.melhorcambio.com/ipca";"table";1);2;2);"[0-9]+[,.]+[0-9]+");"%")
 
+    SELIC
+    =CDI+0,1%
+
     Dolar-Real
     =GOOGLEFINANCE("CURRENCY:USDBRL")
 
-    SELIC
-    =CDI+0,1%
+    Bitcoin-Dollar
+    =GOOGLEFINANCE("CURRENCY:BTCUSD")
   
   */
 
