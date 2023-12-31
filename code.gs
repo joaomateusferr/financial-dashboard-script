@@ -115,7 +115,7 @@ function updateIndicators(input) {
     SELIC
     =CDI+0,1%
 
-    Dolar-Real
+    Dollar-Real
     =GOOGLEFINANCE("CURRENCY:USDBRL")
 
     Bitcoin-Dollar
