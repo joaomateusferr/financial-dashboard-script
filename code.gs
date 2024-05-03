@@ -34,6 +34,20 @@ const StocksPositions = {
   "Earnings" : {"RowStart" : 3, "Ticker" : 1, "NumberOfShares" : 2},
 }
 
+const PositionsPositions = {
+  "BRL" : {"RowStart" : 3, "Ticker" : 1, "Percentage" : 2, "Return" : 3},
+  "USD" : {"RowStart" : 3, "Ticker" : 5, "Percentage" : 6, "Return" : 7},
+}
+
+const USDPositions = {
+  "Earnings" : {"RowStart" : 4, "Ticker" : 1, "NumberOfShares" : 2},
+}
+
+const PositionsSettingsPositions = {
+  "IncludeDividends" : "J3",
+  "SortByReturn" : "J4",
+}
+
 const DividendRanges = {
   "BR" : {"Date": "Dividends(R$)!A3:A", "Tickers" : "Dividends(R$)!B3:B", "Dividends" : "Dividends(R$)!F3:F"},
   "US" : {"Date": "Dividends($)!A3:A","Tickers" : "Dividends($)!B3:B", "Dividends" : "Dividends($)!F3:F"},
@@ -51,8 +65,13 @@ const ExchangeTradedAssetsRanges = {
 
   "ConsolidatedExchangeTradedAssets" : {
     "Tickers" : "Consolidated Exchange Traded Assets!A3:A",
+    "Return" : "Consolidated Exchange Traded Assets!G3:G",
+    "Percentage" : "Consolidated Exchange Traded Assets!H3:H",
+    "ReturnDividends" : "Consolidated Exchange Traded Assets!I3:I",
+    "PercentageDividends" : "Consolidated Exchange Traded Assets!J3:J",
     "Types" : "Consolidated Exchange Traded Assets!K3:K",
-    "Subtypes" : "Consolidated Exchange Traded Assets!L3:L"
+    "Subtypes" : "Consolidated Exchange Traded Assets!L3:L",
+    "Currencys" : "Consolidated Exchange Traded Assets!M3:M"
   },
 
   "FI" : {
@@ -388,11 +407,13 @@ function updateConsolidateExchangeTradedAssets(){
   let ConsolidateExchangeTradedAssets = consolidateExchangeTradedAssets();
   printConsolidateExchangeTradedAssets(ConsolidateExchangeTradedAssets);
   ConsolidateExchangeTradedAssets = updateassetAssetDetails(ConsolidateExchangeTradedAssets);
-  printByType(ConsolidateExchangeTradedAssets, FisPositions, 'FI')
-  printByType(ConsolidateExchangeTradedAssets, AcoesPositions, 'Ações')
-  printByType(ConsolidateExchangeTradedAssets, CryptocurrencyPositions, 'Cryptocurrency')
-  printByType(ConsolidateExchangeTradedAssets, REITsPositions, 'REIT')
-  printByType(ConsolidateExchangeTradedAssets, StocksPositions, 'Stocks')
+  printByType(ConsolidateExchangeTradedAssets, FisPositions, 'FI');
+  printByType(ConsolidateExchangeTradedAssets, AcoesPositions, 'Ações');
+  printByType(ConsolidateExchangeTradedAssets, CryptocurrencyPositions, 'Cryptocurrency');
+  printByType(ConsolidateExchangeTradedAssets, REITsPositions, 'REIT');
+  printByType(ConsolidateExchangeTradedAssets, StocksPositions, 'Stocks');
+  printByCurrency(ConsolidateExchangeTradedAssets, USDPositions, 'USD');
+  updateConsolidatedPositions();
 
 }
 
@@ -456,6 +477,125 @@ function printByType(ConsolidateExchangeTradedAssets, Positions, Type){
 
 }
 
+function printByCurrency(ConsolidateExchangeTradedAssets, Positions, Currency){
+
+  let Sheet = SpreadsheetApp.getActive().getSheetByName(Currency);
+  let RowIndex = Positions['Earnings']["RowStart"];
+
+  for (const [Key, Value] of Object.entries(ConsolidateExchangeTradedAssets)) {
+
+    if((ConsolidateExchangeTradedAssets[Key]['Currency'] && ConsolidateExchangeTradedAssets[Key]['Currency'] == Currency)){
+      
+      Sheet.getRange(RowIndex, Positions['Earnings']["Ticker"]).setValue(Key);
+      Sheet.getRange(RowIndex, Positions['Earnings']["NumberOfShares"]).setValue(ConsolidateExchangeTradedAssets[Key]["NumberOfShares"]);
+      RowIndex++;
+
+    }
+
+  }
+
+}
+
+function getPositionColor(Value) {
+
+  if(Value > 0){
+    return 'green'
+  } else {
+    return 'red'
+  }
+  
+}
+
+function updateConsolidatedPositions(){
+
+  let Sheet = SpreadsheetApp.getActive().getSheetByName('Positions');
+  IncludeDividends = Sheet.getRange(PositionsSettingsPositions["IncludeDividends"]).getValues()[0][0];
+  SortByReturn = Sheet.getRange(PositionsSettingsPositions["SortByReturn"]).getValues()[0][0];
+
+  let Tickers = SpreadsheetApp.getActive().getRange(ExchangeTradedAssetsRanges["ConsolidatedExchangeTradedAssets"]["Tickers"]).getValues();
+  Tickers = parseColumns(Tickers);
+
+  let Currencys = SpreadsheetApp.getActive().getRange(ExchangeTradedAssetsRanges["ConsolidatedExchangeTradedAssets"]["Currencys"]).getValues();
+  Currencys = parseColumns(Currencys);
+
+  let Return = SpreadsheetApp.getActive().getRange(ExchangeTradedAssetsRanges["ConsolidatedExchangeTradedAssets"]["Return"]).getValues();
+  Return = parseColumns(Return);
+
+  let Percentage = SpreadsheetApp.getActive().getRange(ExchangeTradedAssetsRanges["ConsolidatedExchangeTradedAssets"]["Percentage"]).getValues();
+  Percentage = parseColumns(Percentage);
+
+  let ReturnDividends = SpreadsheetApp.getActive().getRange(ExchangeTradedAssetsRanges["ConsolidatedExchangeTradedAssets"]["ReturnDividends"]).getValues();
+  ReturnDividends = parseColumns(ReturnDividends);
+
+  let PercentageDividends = SpreadsheetApp.getActive().getRange(ExchangeTradedAssetsRanges["ConsolidatedExchangeTradedAssets"]["PercentageDividends"]).getValues();
+  PercentageDividends = parseColumns(PercentageDividends);
+
+  let ConsolidatedPositions = {
+    "BRL" : {},
+    "USD" : {},
+  };
+
+  let TickerReturn = 0;
+  let TickerPercentage = 0;
+
+  for (let I = 0; I < Tickers.length; I++) {
+
+    if(IncludeDividends == true){
+
+      TickerReturn = ReturnDividends[I];
+      TickerPercentage = PercentageDividends[I];
+
+    } else {
+      TickerReturn = Return[I];
+      TickerPercentage = Percentage[I];
+    }
+
+    ConsolidatedPositions[Currencys[I]][Tickers[I]] = {};
+    ConsolidatedPositions[Currencys[I]][Tickers[I]]["Return"] = TickerReturn;
+    ConsolidatedPositions[Currencys[I]][Tickers[I]]["Percentage"] = TickerPercentage;
+
+  }
+
+  for (const [Key, Value] of Object.entries(ConsolidatedPositions)) {
+
+    let AuxiliaryArray = Object.entries(Value);
+
+    if(SortByReturn == true){
+
+      AuxiliaryArray.sort((a, b) => b[1].Return - a[1].Return);
+
+    } else {
+
+      AuxiliaryArray.sort((a, b) => b[1].Percentage - a[1].Percentage);
+
+    }
+
+    ConsolidatedPositions[Key] = AuxiliaryArray;
+
+  }
+
+  for (const [KeyCurrency, ValueCurrency] of Object.entries(ConsolidatedPositions)) {
+
+    let RowIndex = PositionsPositions[KeyCurrency]["RowStart"];
+
+    for (const [Key, Value] of ValueCurrency) {
+    
+      Color = getPositionColor(Value["Return"]);
+      Sheet.getRange(RowIndex, PositionsPositions[KeyCurrency]["Ticker"]).setValue(Key);
+      Sheet.getRange(RowIndex, PositionsPositions[KeyCurrency]["Return"]).setValue(Value["Return"]);
+      Sheet.getRange(RowIndex, PositionsPositions[KeyCurrency]["Return"]).setFontColor(Color);
+      Sheet.getRange(RowIndex, PositionsPositions[KeyCurrency]["Percentage"]).setValue(Value["Percentage"]);
+      Sheet.getRange(RowIndex, PositionsPositions[KeyCurrency]["Percentage"]).setFontColor(Color)
+      Sheet.getRange(RowIndex, PositionsPositions[KeyCurrency]["Percentage"]).setNumberFormat('0.00%');
+      RowIndex++;
+    
+    }
+
+
+  }
+
+}
+
 function onEdit(){  //running with each change in the spreadsheet
 
   let ActiveCell = SpreadsheetApp.getActive().getActiveCell();
@@ -465,8 +605,13 @@ function onEdit(){  //running with each change in the spreadsheet
 
   if(SheetName == 'Exchange Traded Assets' && Reference == 'F3' && CellValue == true){
 
-    updateConsolidateExchangeTradedAssets()
+    updateConsolidateExchangeTradedAssets();
+
+  } else if (SheetName == 'Positions' && (Reference == PositionsSettingsPositions["IncludeDividends"] || Reference == PositionsSettingsPositions["SortByReturn"])){
+
+    updateConsolidatedPositions();
 
   }
+
 
 }
