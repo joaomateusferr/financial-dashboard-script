@@ -1,6 +1,7 @@
 const IndicatorsPositions = {
+  "Dollar-Real" :  {"Row" : 3, "RateCol" : 2, "DataCol" : 3, "UpdateCol" : 4},
   "CDI" :  {"Row" : 5, "RateCol" : 2, "DataCol" : 3, "UpdateCol" : 4},
-  "MayerMultiple" :  {"Row" : 8, "RateCol" : 2, "DataCol" : 3, "UpdateCol" : 4} 
+  "MayerMultiple" :  {"Row" : 8, "RateCol" : 2, "DataCol" : 3, "UpdateCol" : 4},
 }
 
 const ConsolidatedExchangeTradedAssetsPositions = {
@@ -84,7 +85,36 @@ const ExchangeTradedAssetsRanges = {
 
 const B3apiBaseUrl = 'https://sistemaswebb3-balcao.b3.com.br'
 
+const EconomiaAwesomeAPIUrl = 'https://economia.awesomeapi.com.br';
+
 var MyAssets = {}
+
+function getDollarRealExchangeRate() {
+  let Url = EconomiaAwesomeAPIUrl + '/json/last/USD-BRL';
+  let Response = UrlFetchApp.fetch(Url);
+  let Sheet = SpreadsheetApp.getActive().getSheetByName("Investments")
+
+  if(Response.getResponseCode() == 200 && Response.getContentText() != ""){
+
+    let Data = JSON.parse(Response.getContentText())
+
+    if(typeof Data["USDBRL"] !== 'undefined'){
+
+      Data = Data["USDBRL"];
+
+      if(typeof Data.bid !== 'undefined' && typeof Data.timestamp !== 'undefined'){
+
+        Sheet.getRange(IndicatorsPositions["Dollar-Real"]["Row"], IndicatorsPositions["Dollar-Real"]["RateCol"]).setValue(parseFloat(Data.bid))
+        Sheet.getRange(IndicatorsPositions["Dollar-Real"]["Row"], IndicatorsPositions["Dollar-Real"]["DataCol"]).setValue(new Date(Data.timestamp * 1000).toLocaleDateString('pt-BR')) 
+        Sheet.getRange(IndicatorsPositions["Dollar-Real"]["Row"], IndicatorsPositions["Dollar-Real"]["UpdateCol"]).setValue(new Date())
+
+      }
+
+    }
+
+  }
+
+}
 
 function getCDI(input) {
 
@@ -174,6 +204,7 @@ function getMayerMultiple(input) {
 function updateIndicators(input) {
   getCDI()
   getMayerMultiple()
+  getDollarRealExchangeRate()
 
   /*
 
@@ -186,7 +217,9 @@ function updateIndicators(input) {
     =CDI+0,1%
 
     Dollar-Real
-    =GOOGLEFINANCE("CURRENCY:USDBRL")
+    //=GOOGLEFINANCE("CURRENCY:USDBRL")
+    Unfortunately, due to a court decision in Brazil, currently Google does not provide the Dollar-Real exchange rate as described above.
+    To have the Dollar-Real exchange rate in the spreadsheet again, method getDollarRealExchangeRate was created by extracting information from an external source.
 
     Bitcoin-Dollar
     =GOOGLEFINANCE("CURRENCY:BTCUSD")
@@ -392,6 +425,10 @@ function printConsolidateExchangeTradedAssets(ConsolidateExchangeTradedAssets){
 
     for (const [Index, Info] of Object.entries(Value)) {
 
+      if(Index == 'AveragePrice'){  //disable average price
+        continue;
+      }
+      
       Sheet.getRange(RowIndex, ConsolidatedExchangeTradedAssetsPositions[Index]).setValue(Info);
 
     }
